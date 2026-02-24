@@ -72,7 +72,7 @@ Before proceeding, verify all of the following:
 
 ```bash
 # From your laptop — can you SSH into the AAP VM?
-ssh user@<AAP_SERVER_IP>
+ssh <user>@<AAP_SERVER_IP>
 
 # From the AAP VM — can you reach managed nodes?
 ping node1.lab.local
@@ -204,6 +204,22 @@ Transfer it to the AAP server using `scp` or direct download:
 ```bash
 scp ansible-automation-platform-setup-bundle-*.tar.gz user@aap1.lab.local:/tmp/
 ```
+
+or
+
+```bash
+scp -i /path/to/your-key.pem ansible-automation-platform-setup-bundle-*.tar.gz ec2-user@<EC2_HOST>:/tmp/
+```
+
+or
+
+```bash
+cd /tmp
+curl -O "https://your-internal-server/bundle.tar.gz"
+# or
+wget "https://your-internal-server/bundle.tar.gz"
+```
+
 
 ### 5.2 Extract the Installer
 
