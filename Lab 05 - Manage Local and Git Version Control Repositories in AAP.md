@@ -5,8 +5,23 @@
 | **Audience** | Beginner to Intermediate (Ops / DevOps / Platform Engineers)               |
 | **Duration** | 3 hours (Theory: 30% / Hands-on: 70%)                                     |
 | **Outcome**  | Understand version control and Git basics, create and organize automation content in Git, connect AAP to GitHub/GitLab, configure branch selection and project sync, and set up webhooks for automatic synchronization |
-| **Platform** | Red Hat Ansible Automation Platform 2.4 / 2.5                              |
-| **Prerequisite** | Lab 02 completed — AAP installed. Lab 04 recommended (credentials and projects basics). |
+| **Platform** | Red Hat Ansible Automation Platform **2.4** (Automation Controller)        |
+| **Prerequisite** | Lab 02 completed — AAP 2.4 installed with web UI access. Lab 04 recommended (credentials and projects basics). |
+
+---
+
+## AAP 2.4 UI Navigation Reference
+
+Before starting, familiarize yourself with the **Automation Controller** UI structure in AAP 2.4:
+
+| Menu | Location | Contains |
+|------|----------|----------|
+| **Resources** | Left navigation panel | Hosts, Inventories, Projects, Credentials, Templates |
+| **Access** | Left navigation panel | Teams, Users, Organizations |
+| **Administration** | Left navigation panel | Notifications, Instances, Instance Groups, Execution Environments, etc. |
+| **Settings** | Left navigation panel | System configuration, Authentication, Jobs, License |
+
+> **Note:** In AAP 2.4, **Projects** are under **Resources**. Projects link to Git repositories or manual directories. "Templates" refers to Job Templates and Workflow Job Templates.
 
 ---
 
@@ -46,17 +61,33 @@
 └─────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
+> **Note:** In AAP 2.4, projects use **Source Control Type** (Manual, Git, or Subversion). For Git, you need a **Source Control Credential** (e.g., GitHub Personal Access Token). The **Playbook Directory** field applies only to Manual projects — it selects a subdirectory under `/var/lib/awx/projects/`.
+
 ---
 
 ## Prerequisites
 
 | Requirement | Details |
 |-------------|---------|
-| AAP Controller | Running from Lab 02 (`aap1.lab.local`) |
+| AAP Controller | Running from Lab 02 (`aap1.lab.local`) — **AAP 2.4** |
 | Managed Nodes | 1–2 Linux VMs for testing playbooks (from Lab 02 or 04) |
 | GitHub or GitLab account | Free tier is sufficient |
 | Git on your laptop | `git` command-line tool installed |
 | SCM Credential | Created in Lab 04 (if not, you will create one in this lab) |
+
+---
+
+## Verify AAP 2.4 Before Starting
+
+**How to check your version:**
+
+1. Log in to the Automation Controller.
+2. Click the **?** (help) icon or your **user profile** in the top-right.
+3. Select **About** — the version (e.g., 4.4.x for AAP 2.4) is displayed.
+
+Alternatively: **Settings** (left panel) → **System** → **Tower** or **Controller** section shows version info.
+
+> **Note:** AAP 2.4 uses Automation Controller 4.4.x. The UI has **Resources**, **Access**, **Administration**, and **Settings** in the left navigation. If you see a different structure, you may be on AAP 2.5 — adjust navigation paths accordingly.
 
 ---
 
@@ -244,6 +275,10 @@ When AAP syncs a project:
 
 ### Step 1 — Create a GitHub Repository
 
+**Purpose:** Set up a remote Git repository to store automation content and connect AAP to it.
+
+**Detailed steps:**
+
 1. Log in to [GitHub](https://github.com) (or GitHub Enterprise)
 2. Click **New repository**
 3. **Repository name:** `ansible-automation-lab`
@@ -253,7 +288,11 @@ When AAP syncs a project:
 
 ### Step 2 — Create the Local Directory Structure
 
-On your laptop or workstation:
+**Purpose:** Organize automation content in a standard directory layout (playbooks, roles, group_vars).
+
+**Detailed steps:**
+
+1. On your laptop or workstation, run:
 
 ```bash
 mkdir -p ansible-automation-lab/{playbooks,roles/common/tasks,group_vars/all,inventory}
@@ -261,6 +300,12 @@ cd ansible-automation-lab
 ```
 
 ### Step 3 — Create a Simple Playbook
+
+**Purpose:** Add a minimal playbook to verify the project works when synced to AAP.
+
+**Detailed steps:**
+
+1. Create `playbooks/ping.yml`:
 
 ```bash
 cat > playbooks/ping.yml << 'EOF'
@@ -275,6 +320,12 @@ EOF
 ```
 
 ### Step 4 — Create a Site Playbook
+
+**Purpose:** Add a main orchestration playbook that gathers facts and displays host info.
+
+**Detailed steps:**
+
+1. Create `playbooks/site.yml`:
 
 ```bash
 cat > playbooks/site.yml << 'EOF'
@@ -291,6 +342,12 @@ EOF
 
 ### Step 5 — Create Group Variables
 
+**Purpose:** Define variables for all hosts (e.g., `ansible_user`, `env`) in `group_vars`.
+
+**Detailed steps:**
+
+1. Create `group_vars/all/all.yml`:
+
 ```bash
 cat > group_vars/all/all.yml << 'EOF'
 ---
@@ -302,6 +359,12 @@ EOF
 
 ### Step 6 — Create requirements.yml
 
+**Purpose:** Declare collection dependencies so AAP installs them during project sync.
+
+**Detailed steps:**
+
+1. Create `requirements.yml` in the project root:
+
 ```bash
 cat > requirements.yml << 'EOF'
 ---
@@ -312,6 +375,12 @@ EOF
 ```
 
 ### Step 7 — Create a README
+
+**Purpose:** Document the repository structure and branch strategy for team collaboration.
+
+**Detailed steps:**
+
+1. Create `README.md`:
 
 ```bash
 cat > README.md << 'EOF'
@@ -336,6 +405,12 @@ EOF
 
 ### Step 8 — Create .gitignore
 
+**Purpose:** Exclude sensitive files and build artifacts from version control.
+
+**Detailed steps:**
+
+1. Create `.gitignore`:
+
 ```bash
 cat > .gitignore << 'EOF'
 *.retry
@@ -348,6 +423,12 @@ EOF
 
 ### Step 9 — Initialize Git and Push to GitHub
 
+**Purpose:** Initialize the local repo, commit all files, and push to the remote.
+
+**Detailed steps:**
+
+1. Initialize Git, commit, and push:
+
 ```bash
 cd ansible-automation-lab
 git init
@@ -358,13 +439,17 @@ git remote add origin https://github.com/YOUR_USERNAME/ansible-automation-lab.gi
 git push -u origin main
 ```
 
-> **Replace** `YOUR_USERNAME` with your GitHub username. If the repo is private, you will be prompted for credentials (use a Personal Access Token, not your password).
+   > **Replace** `YOUR_USERNAME` with your GitHub username. If the repo is private, you will be prompted for credentials (use a Personal Access Token, not your password).
 
 ---
 
 ## Part 3 — Hands-On: Connect AAP to the Git Repository (45 minutes)
 
 ### Step 10 — Create or Verify SCM Credential
+
+**Purpose:** AAP needs a valid credential to authenticate to GitHub for project sync.
+
+**Detailed steps:**
 
 1. Log in to AAP: `https://aap1.lab.local`
 2. Navigate to **Resources --> Credentials**
@@ -378,6 +463,10 @@ git push -u origin main
 4. Click **Save**
 
 ### Step 11 — Create a Project from Git
+
+**Purpose:** Link AAP to your Git repository so playbooks can be pulled and used by job templates.
+
+**Detailed steps:**
 
 1. Navigate to **Resources --> Projects**
 2. Click **Add**
@@ -395,6 +484,10 @@ git push -u origin main
 
 ### Step 12 — Sync the Project
 
+**Purpose:** Pull the latest content from Git to the AAP server. Verify sync succeeds before running jobs.
+
+**Detailed steps:**
+
 1. Click the **Sync** icon (circular arrows) next to the project
 2. Wait for the sync to complete — status should show a green check
 3. Click on the project name
@@ -403,19 +496,27 @@ git push -u origin main
 
 ### Step 13 — Create a Job Template and Run a Playbook
 
+**Purpose:** Create a job template that uses the Git project and verify the playbook runs from synced content.
+
+**Detailed steps:**
+
 1. Navigate to **Resources --> Templates**
 2. Click **Add --> Add job template**
 3. Fill in:
    - **Name:** `Ping-from-Git`
    - **Inventory:** `Lab-Inventory` (or your inventory from Lab 02/04)
    - **Project:** `Lab-Git-Project`
-   - **Playbook:** `playbooks/ping.yml`
+   - **Playbook:** `playbooks/ping.yml` — use the path relative to project root
    - **Credential:** Your Machine credential
 4. Click **Save**
 5. Click **Launch**
 6. Verify the job completes successfully — the playbook was pulled from Git
 
 ### Step 14 — Test "Update on Launch"
+
+**Purpose:** Confirm that AAP automatically syncs the project before each job launch when "Update on launch" is enabled.
+
+**Detailed steps:**
 
 1. In your local repo, edit `playbooks/ping.yml` — add a small change (e.g., a comment)
 2. Commit and push:
@@ -438,6 +539,12 @@ git push
 
 ### Step 15 — Create the `develop` Branch
 
+**Purpose:** Create a development branch for feature work, separate from production (`main`).
+
+**Detailed steps:**
+
+1. Create and push the `develop` branch:
+
 ```bash
 cd ansible-automation-lab
 git checkout -b develop
@@ -446,6 +553,12 @@ git push -u origin develop
 
 ### Step 16 — Create the `staging` Branch
 
+**Purpose:** Create a staging branch for pre-production validation before merging to `main`.
+
+**Detailed steps:**
+
+1. Create and push the `staging` branch:
+
 ```bash
 git checkout -b staging
 git push -u origin staging
@@ -453,6 +566,10 @@ git checkout main
 ```
 
 ### Step 17 — Create a Project for the Staging Branch
+
+**Purpose:** Create a second AAP project that uses the `staging` branch — different environments get different code.
+
+**Detailed steps:**
 
 1. **Resources --> Projects --> Add**
 2. Fill in:
@@ -468,6 +585,10 @@ git checkout main
 
 ### Step 18 — Create a Job Template for Staging
 
+**Purpose:** Create a job template that uses the staging project — runs playbooks from the `staging` branch.
+
+**Detailed steps:**
+
 1. **Resources --> Templates --> Add --> Add job template**
 2. Fill in:
    - **Name:** `Ping-Staging`
@@ -478,6 +599,10 @@ git checkout main
 3. Click **Save**
 
 ### Step 19 — Test Branch Isolation
+
+**Purpose:** Verify that different branches provide different content — each job template uses its project's branch.
+
+**Detailed steps:**
 
 1. On `develop` branch, make a change:
 
@@ -507,6 +632,10 @@ git push
 
 ### Step 20 — Enable Webhook in AAP
 
+**Purpose:** Obtain the webhook URL so GitHub can trigger a project sync when code is pushed.
+
+**Detailed steps:**
+
 1. Open the `Lab-Git-Project` project
 2. Note the **Webhook URL** (or find it under **Details** section)
 3. It looks like: `https://aap1.lab.local/api/v2/project_update/<ID>/`
@@ -515,8 +644,12 @@ git push
 
 ### Step 21 — Configure GitHub Webhook
 
+**Purpose:** Configure GitHub to send a POST request to AAP when code is pushed — triggers automatic sync.
+
+**Detailed steps:**
+
 1. In GitHub, open your repository
-2. Settings --> Webhooks --> Add webhook
+2. **Settings** --> **Webhooks** --> **Add webhook**
 3. Fill in:
    - **Payload URL:** `https://aap1.lab.local/api/v2/project_update/<PROJECT_UPDATE_ID>/`
 
@@ -532,6 +665,10 @@ git push
 7. Click **Add webhook**
 
 ### Step 22 — Verify Webhook (If AAP Is Reachable)
+
+**Purpose:** Confirm that pushing to GitHub triggers an automatic project sync in AAP.
+
+**Detailed steps:**
 
 1. In your local repo, make a small change and push:
 
@@ -549,7 +686,11 @@ git push
 
 ### Step 23 — Alternative: Manual and Scheduled Sync
 
-If webhooks are not feasible in your lab:
+**Purpose:** Use manual sync or scheduled updates when webhooks are not feasible (e.g., AAP not reachable from internet).
+
+**Detailed steps:**
+
+1. If webhooks are not feasible in your lab:
 
 1. **Manual sync:** Click the Sync icon whenever you push changes
 2. **Update on launch:** Already configured — every job launch syncs first
@@ -560,6 +701,12 @@ If webhooks are not feasible in your lab:
 ## Part 6 — Hands-On: Organize Content with Roles and requirements.yml (25 minutes)
 
 ### Step 24 — Create a Simple Role
+
+**Purpose:** Create a reusable role to demonstrate modular automation structure.
+
+**Detailed steps:**
+
+1. Create the role directory and tasks:
 
 ```bash
 cd ansible-automation-lab
@@ -574,6 +721,12 @@ EOF
 
 ### Step 25 — Create a Playbook That Uses the Role
 
+**Purpose:** Reference the role from a playbook — roles are included via the `roles:` keyword.
+
+**Detailed steps:**
+
+1. Create `playbooks/role-demo.yml`:
+
 ```bash
 cat > playbooks/role-demo.yml << 'EOF'
 ---
@@ -586,6 +739,12 @@ EOF
 ```
 
 ### Step 26 — Update requirements.yml
+
+**Purpose:** Add more collections to `requirements.yml` — AAP installs them during project sync.
+
+**Detailed steps:**
+
+1. Update `requirements.yml`:
 
 ```bash
 cat > requirements.yml << 'EOF'
@@ -600,6 +759,12 @@ EOF
 
 ### Step 27 — Commit and Push
 
+**Purpose:** Commit the new role and playbook, then push to the remote repository.
+
+**Detailed steps:**
+
+1. Commit and push:
+
 ```bash
 git add .
 git commit -m "Add hello role and role-demo playbook"
@@ -607,6 +772,10 @@ git push
 ```
 
 ### Step 28 — Sync and Run in AAP
+
+**Purpose:** Sync the project to pull the new role, then run the role-demo playbook via a job template.
+
+**Detailed steps:**
 
 1. In AAP, sync `Lab-Git-Project`
 2. Create a job template:
@@ -624,7 +793,11 @@ git push
 
 ### Step 29 — Create a Manual Project on AAP Server
 
-SSH to the AAP server:
+**Purpose:** Create a local directory with playbooks for labs that don't use Git — Manual project type.
+
+**Detailed steps:**
+
+1. SSH to the AAP server and create the directory:
 
 ```bash
 sudo mkdir -p /var/lib/awx/projects/lab-manual
@@ -642,6 +815,10 @@ sudo chown -R awx:awx /var/lib/awx/projects/lab-manual
 
 ### Step 30 — Create Manual Project in AAP UI
 
+**Purpose:** Configure AAP to use the local directory as a project source (Manual type).
+
+**Detailed steps:**
+
 1. **Resources --> Projects --> Add**
 2. Fill in:
    - **Name:** `Lab-Manual-Project`
@@ -651,6 +828,12 @@ sudo chown -R awx:awx /var/lib/awx/projects/lab-manual
 3. Click **Save**
 
 ### Step 31 — Compare Manual vs. Git Project
+
+**Purpose:** Understand when to use Manual vs. Git projects — different use cases and trade-offs.
+
+**Detailed steps:**
+
+1. Review the comparison:
 
 | Aspect | Manual Project | Git Project |
 |--------|----------------|-------------|

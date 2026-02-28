@@ -5,8 +5,23 @@
 | **Audience** | Beginner to Intermediate (Ops / DevOps / Platform Engineers)               |
 | **Duration** | 4 hours (Theory: 35% / Hands-on: 65%)                                     |
 | **Outcome**  | Create organizations, users, and teams; implement RBAC policies; grant object-level permissions; test access control scenarios; understand authentication options |
-| **Platform** | Red Hat Ansible Automation Platform 2.4 / 2.5                              |
-| **Prerequisite** | Lab 02 completed — AAP installed with web UI access. Labs 04–05 recommended (inventories, projects, job templates). |
+| **Platform** | Red Hat Ansible Automation Platform **2.4** (Automation Controller)        |
+| **Prerequisite** | Lab 02 completed — AAP 2.4 installed with web UI access. Labs 04–05 recommended (inventories, projects, job templates). |
+
+---
+
+## AAP 2.4 UI Navigation Reference
+
+Before starting, familiarize yourself with the **Automation Controller** UI structure in AAP 2.4:
+
+| Menu | Location | Contains |
+|------|----------|----------|
+| **Resources** | Left navigation panel | Hosts, Inventories, Projects, Credentials, Templates |
+| **Access** | Left navigation panel | Organizations, Users, Teams |
+| **Administration** | Left navigation panel | Notifications, Instances, Instance Groups, Execution Environments, etc. |
+| **Settings** | Left navigation panel | System configuration, Authentication, Jobs, License |
+
+> **Note:** In AAP 2.4, **Access** contains Organizations, Users, and Teams. Some versions may show "Access Management" — navigate to Organizations, Users, and Teams from the left panel.
 
 ---
 
@@ -40,15 +55,31 @@
 └─────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
+> **Note:** In AAP 2.4, organizations scope all resources. Users must be in an organization to access resources. Teams belong to one organization. RBAC roles are granted per resource (project, inventory, template, credential).
+
 ---
 
 ## Prerequisites
 
 | Requirement | Details |
 |-------------|---------|
-| AAP Controller | Running from Lab 02 (`aap1.lab.local`) |
+| AAP Controller | Running from Lab 02 (`aap1.lab.local`) — **AAP 2.4** |
 | Admin access | Logged in as `admin` (or equivalent System Administrator) |
 | Existing resources | At least one inventory, project, and job template from previous labs |
+
+---
+
+## Verify AAP 2.4 Before Starting
+
+**How to check your version:**
+
+1. Log in to the Automation Controller.
+2. Click the **?** (help) icon or your **user profile** in the top-right.
+3. Select **About** — the version (e.g., 4.4.x for AAP 2.4) is displayed.
+
+Alternatively: **Settings** (left panel) → **System** → **Tower** or **Controller** section shows version info.
+
+> **Note:** AAP 2.4 uses Automation Controller 4.4.x. The UI has **Resources**, **Access**, **Administration**, and **Settings** in the left navigation. If you see "Access Management" instead of "Access", the Organizations/Users/Teams paths may be under that menu.
 
 ---
 
@@ -251,26 +282,38 @@ If any of these is missing, the job launch will fail or the user will not see th
 
 ### Step 1 — Create a New Organization
 
+**Purpose:** Create an organization to scope users, teams, and resources for multi-tenancy or environment separation.
+
+**Detailed steps:**
+
 1. Log in to AAP as `admin`
-2. Navigate to **Access Management --> Organizations**
+2. Navigate to **Access** → **Organizations** (or **Access Management** → **Organizations** in some versions)
 3. Click **Create organization**
 4. Fill in:
    - **Name:** `Org-Dev`
    - **Description:** `Development organization for lab`
 5. Click **Create organization**
 
-> **Note:** If you have a Self-support license, you may only have the Default organization. In that case, perform all exercises within **Default** — create teams and users there instead of a new org.
+   > **Note:** If you have a Self-support license, you may only have the Default organization. In that case, perform all exercises within **Default** — create teams and users there instead of a new org.
 
 ### Step 2 — Create a Second Organization (Optional)
 
-1. **Access Management --> Organizations --> Create organization**
+**Purpose:** Create a second organization (e.g., for production) to demonstrate org isolation.
+
+**Detailed steps:**
+
+1. **Access** → **Organizations** → **Create organization** (or **Add**)
 2. **Name:** `Org-Prod`
 3. **Description:** `Production organization for lab`
 4. Click **Create organization**
 
 ### Step 3 — Create Users
 
-1. Navigate to **Access Management --> Users**
+**Purpose:** Create users that will be assigned to teams and granted roles for RBAC testing.
+
+**Detailed steps:**
+
+1. Navigate to **Access** → **Users**
 2. Click **Create user**
 3. Create the following users (repeat for each):
 
@@ -285,7 +328,11 @@ If any of these is missing, the job launch will fail or the user will not see th
 
 ### Step 4 — Add Users to an Organization
 
-1. **Access Management --> Organizations** → Click **Org-Dev** (or **Default**)
+**Purpose:** Add users to an organization so they can access resources scoped to that org.
+
+**Detailed steps:**
+
+1. **Access** → **Organizations** → Click **Org-Dev** (or **Default**)
 2. Click the **Users** tab
 3. Click **Add users**
 4. Select `dev_alice`, `ops_bob`, `audit_carol`
@@ -299,7 +346,11 @@ If any of these is missing, the job launch will fail or the user will not see th
 
 ### Step 5 — Create Teams
 
-1. Navigate to **Access Management --> Teams**
+**Purpose:** Create teams to group users and assign permissions in bulk (Developer, Operator, Auditor patterns).
+
+**Detailed steps:**
+
+1. Navigate to **Access** → **Teams**
 2. Click **Create team**
 3. Create:
 
@@ -313,6 +364,10 @@ If any of these is missing, the job launch will fail or the user will not see th
 
 ### Step 6 — Add Users to Teams
 
+**Purpose:** Assign users to teams so they inherit the team's roles on resources.
+
+**Detailed steps:**
+
 1. Open **Dev-Team**
 2. Click **Users** tab → **Add users**
 3. Select `dev_alice` → **Add**
@@ -321,7 +376,11 @@ If any of these is missing, the job launch will fail or the user will not see th
 
 ### Step 7 — Verify Team Membership
 
-1. **Access Management --> Users** → Click `dev_alice`
+**Purpose:** Confirm users are correctly assigned to their teams before testing RBAC.
+
+**Detailed steps:**
+
+1. **Access** → **Users** → Click `dev_alice`
 2. Check **Teams** tab — should show **Dev-Team**
 3. Repeat for `ops_bob` and `audit_carol`
 
@@ -331,9 +390,11 @@ If any of these is missing, the job launch will fail or the user will not see th
 
 ### Step 8 — Grant Permissions to Dev-Team (Developer Pattern)
 
-Dev-Team should be able to edit projects and run job templates.
+**Purpose:** Grant Dev-Team Member on project, Execute on template, Use on inventory and credential — developer pattern.
 
-1. **Access Management --> Teams** → **Dev-Team**
+**Detailed steps:**
+
+1. **Access** → **Teams** → **Dev-Team**
 2. Click **Roles** tab
 3. Click **Add roles**
 4. Select **Resource type:** **Projects**
@@ -349,9 +410,11 @@ Dev-Team should be able to edit projects and run job templates.
 
 ### Step 9 — Grant Permissions to Ops-Team (Operator Pattern)
 
-Ops-Team should run jobs but not edit projects.
+**Purpose:** Grant Ops-Team Execute on template, Use on inventory and credential — operator pattern (run only, no edit).
 
-1. **Access Management --> Teams** → **Ops-Team**
+**Detailed steps:**
+
+1. **Access** → **Teams** → **Ops-Team**
 2. **Roles** tab → **Add roles**
 3. Add:
     - **Job Templates** → `Ping-Lab` → **Execute**
@@ -361,9 +424,11 @@ Ops-Team should run jobs but not edit projects.
 
 ### Step 10 — Grant Permissions to Audit-Team (Auditor Pattern)
 
-Audit-Team should have read-only access.
+**Purpose:** Grant Audit-Team Read on project, inventory, template — auditor pattern (view only, no execute).
 
-1. **Access Management --> Teams** → **Audit-Team**
+**Detailed steps:**
+
+1. **Access** → **Teams** → **Audit-Team**
 2. **Roles** tab → **Add roles**
 3. Add **Read** on:
     - **Projects** → `Lab-Git-Project`
@@ -373,9 +438,11 @@ Audit-Team should have read-only access.
 
 ### Step 11 — Grant Permissions via User (Alternative)
 
-You can also grant roles directly to a user instead of a team:
+**Purpose:** Demonstrate that roles can be granted directly to users (alternative to team-based assignment).
 
-1. **Access Management --> Users** → Click `dev_alice`
+**Detailed steps:**
+
+1. **Access** → **Users** → Click `dev_alice`
 2. **Roles** tab → **Add roles**
 3. Select resource type, resource, and role — same as for teams
 
@@ -385,43 +452,63 @@ You can also grant roles directly to a user instead of a team:
 
 ### Step 12 — Test as Developer (dev_alice)
 
+**Purpose:** Verify dev_alice can edit projects, launch jobs, and use inventories/credentials as expected for the developer role.
+
+**Detailed steps:**
+
 1. Log out from `admin`
 2. Log in as `dev_alice` with the password you set
 3. Verify:
-   - **Resources --> Projects** — Can see and edit the project (sync, etc.)
-   - **Resources --> Inventories** — Can see the inventory
-   - **Resources --> Templates** — Can see and **Launch** the job template
+   - **Resources** → **Projects** — Can see and edit the project (sync, etc.)
+   - **Resources** → **Inventories** — Can see the inventory
+   - **Resources** → **Templates** — Can see and **Launch** the job template
 4. **Launch** the `Ping-Lab` job — it should succeed
 5. Try editing a playbook in the project (if Git) or project settings — should work
 
 ### Step 13 — Test as Operator (ops_bob)
 
+**Purpose:** Verify ops_bob can launch jobs but cannot edit projects (operator pattern).
+
+**Detailed steps:**
+
 1. Log out, log in as `ops_bob`
 2. Verify:
-   - **Resources --> Projects** — May see project but **cannot** edit (no Member role)
-   - **Resources --> Templates** — Can see and **Launch** the job template
+   - **Resources** → **Projects** — May see project but **cannot** edit (no Member role)
+   - **Resources** → **Templates** — Can see and **Launch** the job template
 3. **Launch** the job — it should succeed
 4. Try to edit the project — should be denied or see read-only view
 
 ### Step 14 — Test as Auditor (audit_carol)
 
+**Purpose:** Verify audit_carol has read-only access and cannot launch jobs (auditor pattern).
+
+**Detailed steps:**
+
 1. Log out, log in as `audit_carol`
 2. Verify:
-   - **Resources --> Projects** — Can see project (read-only)
-   - **Resources --> Inventories** — Can see inventory
-   - **Resources --> Templates** — Can see template but **cannot** Launch (no Execute)
+   - **Resources** → **Projects** — Can see project (read-only)
+   - **Resources** → **Inventories** — Can see inventory
+   - **Resources** → **Templates** — Can see template but **cannot** Launch (no Execute)
 3. Try to **Launch** the job — should be denied or button hidden
 4. Try to edit any resource — should be denied
 
 ### Step 15 — Test Permission Denial
 
-1. As `ops_bob`, try to access **Access Management --> Users** — should be restricted (normal users cannot manage users)
+**Purpose:** Confirm that users without system-level permissions are correctly denied access to admin areas.
+
+**Detailed steps:**
+
+1. As `ops_bob`, try to access **Access** → **Users** — should be restricted (normal users cannot manage users)
 2. As `audit_carol`, try to create a new inventory — should be denied
 3. As `dev_alice`, try to delete a credential — should be denied (unless granted Admin)
 
 ### Step 16 — Document Your RBAC Matrix
 
-Create a simple table of who can do what:
+**Purpose:** Record the effective permissions for each role to validate your RBAC design and aid troubleshooting.
+
+**Detailed steps:**
+
+1. Create a simple table of who can do what:
 
 | User | Project Edit | Job Launch | Inventory Edit | Credential View |
 |------|--------------|------------|----------------|-----------------|
@@ -435,8 +522,12 @@ Create a simple table of who can do what:
 
 ### Step 17 — Add an Organization Administrator
 
+**Purpose:** Grant dev_alice org-admin rights so she can manage teams, users, and roles within Org-Dev only.
+
+**Detailed steps:**
+
 1. Log back in as `admin`
-2. **Access Management --> Organizations** → **Org-Dev**
+2. **Access** → **Organizations** → **Org-Dev**
 3. Click **Administrators** tab
 4. Click **Add administrators**
 5. Select `dev_alice`
@@ -450,6 +541,10 @@ Create a simple table of who can do what:
 
 ### Step 18 — Create Resources in a New Organization (If You Have Multiple Orgs)
 
+**Purpose:** Demonstrate multi-org setup and that users can access resources from multiple orgs when assigned.
+
+**Detailed steps:**
+
 1. As `admin`, switch to **Org-Prod**
 2. Create an inventory, project, and job template in Org-Prod
 3. Add `ops_bob` to Org-Prod as Member
@@ -457,6 +552,10 @@ Create a simple table of who can do what:
 5. Log in as `ops_bob` — he should see resources from **both** Org-Dev and Org-Prod (if he is in both), or only from orgs he belongs to
 
 ### Step 19 — Verify Isolation Between Organizations
+
+**Purpose:** Confirm that users in one org cannot see resources from another org (org isolation).
+
+**Detailed steps:**
 
 1. Create a user `prod_only` in **Org-Prod** only
 2. Log in as `prod_only` — should see only Org-Prod resources

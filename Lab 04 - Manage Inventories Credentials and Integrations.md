@@ -5,8 +5,23 @@
 | **Audience** | Beginner to Intermediate (Ops / DevOps / Platform Engineers)               |
 | **Duration** | 4 hours (Theory: 25% / Hands-on: 75%)                                     |
 | **Outcome**  | Create and manage static and dynamic inventories, configure host/group variables, build smart inventories, set up multiple credential types, integrate with Git and notification services, and understand external secret management |
-| **Platform** | Red Hat Ansible Automation Platform 2.4 / 2.5                              |
-| **Prerequisite** | Lab 02 completed — AAP installed with web UI access. Lab 03 optional (multi-node setup). |
+| **Platform** | Red Hat Ansible Automation Platform **2.4** (Automation Controller)         |
+| **Prerequisite** | Lab 02 completed — AAP 2.4 installed with web UI access. Lab 03 optional (multi-node setup). |
+
+---
+
+## AAP 2.4 UI Navigation Reference
+
+Before starting, familiarize yourself with the **Automation Controller** UI structure in AAP 2.4:
+
+| Menu | Location | Contains |
+|------|----------|----------|
+| **Resources** | Left navigation panel | Hosts, Inventories, Projects, Credentials, Templates |
+| **Access** | Left navigation panel | Teams, Users, Organizations |
+| **Administration** | Left navigation panel | Notifications, Instances, Instance Groups, Execution Environments, etc. |
+| **Settings** | Left navigation panel | System configuration, Authentication, Jobs, License |
+
+> **Note:** In AAP 2.4, "Templates" refers to Job Templates and Workflow Job Templates. "Notifications" are under **Administration**, not a separate top-level menu.
 
 ---
 
@@ -54,11 +69,25 @@ External Integrations:
 
 | Requirement | Details |
 |-------------|---------|
-| AAP Controller | Running from Lab 02 (`aap1.lab.local`) |
+| AAP Controller | Running from Lab 02 (`aap1.lab.local`) — **AAP 2.4** |
 | Managed Nodes | 2–4 Linux VMs (RHEL, Ubuntu, AlmaLinux) — can reuse nodes from Lab 02 |
 | Network | AAP can SSH to all managed nodes |
 | Optional | GitHub/GitLab account for SCM integration; Slack workspace for notifications |
 | Optional | AWS account for EC2 dynamic inventory demo |
+
+---
+
+## Verify AAP 2.4 Before Starting
+
+**How to check your version:**
+
+1. Log in to the Automation Controller.
+2. Click the **?** (help) icon or your **user profile** in the top-right.
+3. Select **About** — the version (e.g., 4.4.x for AAP 2.4) is displayed.
+
+Alternatively: **Settings** (left panel) → **System** → **Tower** or **Controller** section shows version info.
+
+> **Note:** AAP 2.4 uses Automation Controller 4.4.x. The UI has **Resources**, **Access**, **Administration**, and **Settings** in the left navigation. If you see a different structure (e.g., Platform-level "Access Management"), you may be on AAP 2.5 — adjust navigation paths accordingly.
 
 ---
 
@@ -246,46 +275,74 @@ A **webhook** allows external systems to **trigger** AAP jobs:
 
 ### Step 1 — Create a Static Inventory
 
-1. Log in to AAP: `https://aap1.lab.local`
-2. Navigate to **Resources --> Inventories**
-3. Click **Add --> Add inventory**
-4. Fill in:
-   - **Name:** `Lab-Static-Inventory`
-   - **Organization:** `Default`
-   **Description:** `Static inventory for lab - webservers, appservers, databases`
-5. Click **Save**
+**Purpose:** A static inventory is created and maintained manually in the UI. It is the simplest way to define your managed hosts.
+
+**Detailed steps:**
+
+1. **Log in** to the Automation Controller: Open a browser and go to `https://aap1.lab.local` (or your AAP server IP). Accept the self-signed certificate warning if prompted.
+
+2. **Navigate to Inventories:** In the left navigation panel, click **Resources** to expand it (if collapsed), then click **Inventories**. You will see a list of existing inventories (e.g., `Default` from Lab 02).
+
+3. **Add a new inventory:** Click the **Add** button (top right). From the dropdown, select **Add inventory**.  
+   > **Why this matters:** In AAP 2.4, "Add" may show multiple options. Choose **Add inventory** for a standard (non-smart, non-constructed) inventory.
+
+4. **Fill in the required fields:**
+   - **Name:** `Lab-Static-Inventory` — This is the display name for your inventory.
+   - **Organization:** Select `Default` from the dropdown. All resources in AAP 2.4 belong to an organization.
+   - **Description:** `Static inventory for lab - webservers, appservers, databases` (optional but recommended for documentation).
+
+5. **Save:** Click the blue **Save** button at the bottom of the form. The inventory details page will open. In the **classic UI**, you should see tabs such as **Details**, **Hosts**, **Groups**, **Sources**, **Access**. If you don't see **Groups**, use **Actions** → **Create a new Group** instead.
+
+---
 
 ### Step 2 — Create Groups
 
-1. Open `Lab-Static-Inventory`
-2. Click the **Groups** tab
-3. Click **Add**
-4. Create these groups one by one:
+**Purpose:** Groups organize hosts logically (e.g., by tier or environment). You can run playbooks against specific groups.
 
-| Group Name | Description |
-|------------|-------------|
-| `webservers` | Web tier hosts |
-| `appservers` | Application tier hosts |
-| `databases` | Database tier hosts |
-| `prod` | Production environment (parent group) |
+**Detailed steps:**
 
-5. After creating `prod`, edit it and add **Child Groups**: `webservers`, `appservers`, `databases` so that `prod` contains all three.
+1. **Open the inventory:** From the Inventories list, click on `Lab-Static-Inventory` to open it. You must be on the **inventory details page** (not the list view).
+
+2. **Go to groups:**
+   - **Classic UI:** Click the **Groups** tab. Initially it will be empty.
+   - **If you don't see a Groups tab:** Use **Actions** (top right) → **Create a new Group**. This opens the same group creation form.
+   - **New UI Preview:** If you enabled "Preview of New User Interface" (Settings → System → Miscellaneous), the layout may differ. Use the classic UI for this lab, or look for an equivalent **Groups** or **Create Group** option in the new interface.
+
+   > **Note:** Groups are only available for **standard** inventories. Smart Inventories and Constructed Inventories do not have a Groups tab.
+
+3. **Add the first group:** Click the **Add** button (or use Actions → Create a new Group). In the **Create new group** form:
+   - **Name:** `webservers` (required)
+   - **Description:** `Web tier hosts` (optional)
+   - Click **Save**.
+
+4. **Repeat for the remaining groups:** Click **Add** again and create:
+   - `appservers` — Application tier hosts
+   - `databases` — Database tier hosts
+   - `prod` — Production environment (parent group)
+
+5. **Create the parent-child relationship:** Click on the `prod` group to edit it. In the **Parent Groups** or **Child Groups** section (depending on UI layout), add `webservers`, `appservers`, and `databases` as **child groups** of `prod`.  
+   > **Why:** When you run a playbook against `prod`, it will target all hosts in webservers, appservers, and databases. Save the group.
+
+---
 
 ### Step 3 — Add Hosts to Groups
 
-1. Click the **Hosts** tab
-2. Click **Add**
-3. Add hosts. Use your actual hostnames or IPs. Example:
+**Purpose:** Hosts are the actual targets (servers) that Ansible will manage. Each host must be assigned to at least one group.
 
-| Host Name | Groups | Notes |
-|-----------|--------|-------|
-| `web1.lab.local` | webservers, prod | Or use `node1.lab.local` if you have only 2 nodes |
-| `app1.lab.local` | appservers, prod | Can be same as web1 in minimal lab |
-| `db1.lab.local` | databases, prod | Can be same as web1 in minimal lab |
+**Detailed steps:**
 
-> **Minimal lab:** If you have only 2 nodes (`node1`, `node2`), add both and assign `node1` to `webservers` and `prod`, and `node2` to `appservers` and `prod`. You can add the same host to multiple groups.
+1. **Go to the Hosts tab:** Click the **Hosts** tab in `Lab-Static-Inventory`.
 
-4. For each host, set **Variables** (click the host, then **Variables** tab) if needed:
+2. **Add the first host:** Click **Add**. In the form:
+   - **Name:** `web1.lab.local` (or `node1.lab.local` if you have only 2 nodes). This is the Ansible host identifier.
+   - **Groups:** Select `webservers` and `prod` from the groups list. You can select multiple groups.
+   - Click **Save**.
+
+3. **Add more hosts:** Repeat for:
+   - `app1.lab.local` — Groups: `appservers`, `prod`, or use the same host as web1 in a minimal lab.
+   - `db1.lab.local` — Groups: `databases`, `prod`.
+
+4. **Set host variables (if needed):** Click on a host name (e.g., `web1.lab.local`). Go to the **Variables** tab. Click the edit (pencil) icon and add:
 
 ```yaml
 ---
@@ -293,12 +350,23 @@ ansible_host: 192.168.1.20
 env: prod
 ```
 
+   > **Explanation:** `ansible_host` tells Ansible which IP or hostname to connect to. If the host name is already resolvable (e.g., in `/etc/hosts`), you can omit it. Use your actual managed node IP.
+
+5. **Minimal lab:** If you have only 2 nodes, add `node1` and `node2` and assign them to multiple groups. For example, `node1` can be in both `webservers` and `prod`.
+
+---
+
 ### Step 4 — Set Group Variables
 
-1. Go to **Groups** tab
-2. Click on `webservers`
-3. Click **Variables** tab
-4. Add:
+**Purpose:** Group variables apply to all hosts in that group. Useful for shared settings (e.g., `ansible_user`, `env`).
+
+**Detailed steps:**
+
+1. **Go to the Groups tab:** Click the **Groups** tab. Click on the `webservers` group.
+
+2. **Open Variables:** Click the **Variables** tab. Click the edit (pencil) icon to modify.
+
+3. **Add variables in YAML format:**
 
 ```yaml
 ---
@@ -306,37 +374,48 @@ env: prod
 tier: web
 ```
 
-5. Repeat for `appservers` and `databases` with appropriate `tier` values.
+   Click **Save**.
+
+4. **Repeat for other groups:** Edit `appservers` and add `tier: app`; edit `databases` and add `tier: db`.
+
+---
 
 ### Step 5 — Verify Variable Precedence
 
-Create a host variable that overrides the group:
+**Purpose:** Host variables override group variables. This is a key concept in Ansible.
 
-1. Edit `web1.lab.local` (or your first host)
-2. **Variables** tab, add:
+**Detailed steps:**
+
+1. **Edit a host:** Click the **Hosts** tab, then click on `web1.lab.local` (or your first host).
+
+2. **Add a host-specific variable:** In the **Variables** tab, add:
 
 ```yaml
 ---
 custom_http_port: 8080
 ```
 
-When a playbook uses `{{ custom_http_port }}` on this host, it will get `8080`; other hosts in `webservers` without this variable would need a default or would fail.
+3. **Save.** When a playbook uses `{{ custom_http_port }}` on this host, it will get `8080`. Other hosts in `webservers` without this variable would need a default or would fail if the variable is required.
 
 ---
 
 ## Part 3 — Hands-On: Dynamic Inventory (45 minutes)
 
-### Option A — File-Based Dynamic Inventory (No Cloud Required)
+### Option A — Project-Sourced Dynamic Inventory (No Cloud Required)
 
-AAP can use a **file** as an inventory source. The file can be updated externally (script, CI/CD) and AAP syncs it.
+**AAP 2.4 behavior:** In AAP 2.4, dynamic inventory from a file or script must come from a **Project** (SCM or Manual). There is no "local file path" source. We will use a **Manual project** with an inventory file in `/var/lib/awx/projects/`.
 
-#### Step 6 — Create an Inventory File on the AAP Server
+#### Step 6 — Create an Inventory File in a Project Directory on the AAP Server
 
-SSH to the AAP server and create a file:
+**Purpose:** The inventory file will be stored in a project directory. AAP will sync it via the "Sourcing from a Project" inventory source.
+
+**Detailed steps:**
+
+1. **SSH to the AAP server** and create a project directory with an inventory file:
 
 ```bash
-sudo mkdir -p /var/lib/awx/inventory_files
-sudo tee /var/lib/awx/inventory_files/dynamic_hosts.yml > /dev/null << 'EOF'
+sudo mkdir -p /var/lib/awx/projects/lab-inventory-project
+sudo tee /var/lib/awx/projects/lab-inventory-project/dynamic_hosts.yml > /dev/null << 'EOF'
 ---
 all:
   children:
@@ -361,28 +440,50 @@ all:
 EOF
 ```
 
-> **Replace IPs** with your actual managed node IPs. For a 2-node lab, use the same IP for multiple hosts or reduce the list.
+2. **Replace IPs** with your actual managed node IPs. For a 2-node lab, use the same IP for multiple hosts or reduce the list.
+
+3. **Set ownership** so the `awx` user can read the files:
 
 ```bash
-sudo chown -R awx:awx /var/lib/awx/inventory_files
+sudo chown -R awx:awx /var/lib/awx/projects/lab-inventory-project
 ```
 
-#### Step 7 — Create Inventory with File Source in AAP
+#### Step 7 — Create a Manual Project and Inventory with "Sourcing from a Project"
 
-1. **Resources --> Inventories --> Add --> Add inventory**
-2. **Name:** `Lab-Dynamic-Inventory`
-3. **Organization:** `Default`
-4. Click **Save**
-5. Click **Sources** tab
-6. Click **Add**
-7. Fill in:
-   - **Name:** `File-Source`
-   - **Source:** `File, directory or script`
-   - **File:** Browse to `/var/lib/awx/inventory_files/dynamic_hosts.yml` (or type the path)
-   - **Update on launch:** Check this so the inventory refreshes when a job uses it
-8. Click **Save**
-9. Click **Sync all** (or the sync icon next to the source)
-10. After sync, check **Hosts** and **Groups** — they should be populated from the file
+**Purpose:** AAP 2.4 requires a Project to source inventory from. We create a Manual project pointing to the directory, then an inventory that sources from that project.
+
+**Detailed steps:**
+
+1. **Create the Manual project (if not exists):**  
+   - **Resources --> Projects --> Add**  
+   - **Name:** `Lab-Inventory-Project`  
+   - **Organization:** `Default`  
+   - **Source Control Type:** `Manual`  
+   - **Playbook Directory:** Select or type `lab-inventory-project` (the folder name under `/var/lib/awx/projects/`).  
+   - Click **Save**.  
+   - Click the **Sync** (refresh) icon to ensure the project has the latest content.
+
+2. **Create the inventory:**  
+   - **Resources --> Inventories --> Add --> Add inventory**  
+   - **Name:** `Lab-Dynamic-Inventory`  
+   - **Organization:** `Default`  
+   - Click **Save**.
+
+3. **Add the inventory source:**  
+   - Open `Lab-Dynamic-Inventory` and click the **Sources** tab.  
+   - Click **Add**. The **Create Source** window opens.
+
+4. **Configure the source:**  
+   - **Name:** `Project-Source`  
+   - **Source:** Select **Sourcing from a Project** from the dropdown.  
+   - **Project:** Click the search icon and select `Lab-Inventory-Project`.  
+   - **Inventory File:** Type `dynamic_hosts.yml` (the file name in the project). You can also use the dropdown to select it if it appears after a project sync.  
+   - **Update on Launch:** Check this — the inventory will refresh when a job using it is launched.  
+   - Click **Save**.
+
+5. **Sync the inventory:** Click **Sync all** (or the sync icon next to the source). Wait for the sync to complete (green check).
+
+6. **Verify:** Click the **Hosts** and **Groups** tabs — they should be populated from the YAML file.
 
 ### Option B — Project-Sourced Dynamic Inventory (Script in Git)
 
@@ -390,7 +491,11 @@ If you use a Git project, you can place an inventory script in the repo that out
 
 #### Step 8 — Create an Inventory Script (Alternative to Option A)
 
-On your laptop or a dev machine, create a repo with:
+**Purpose:** A Python script that outputs Ansible JSON inventory format. AAP runs this script when syncing.
+
+**Detailed steps:**
+
+1. **On your laptop or dev machine**, create a Git repo with:
 
 **inventory/dynamic_inventory.py**
 
@@ -398,17 +503,13 @@ On your laptop or a dev machine, create a repo with:
 #!/usr/bin/env python3
 """Simple dynamic inventory for AAP lab - outputs Ansible JSON inventory."""
 import json
-import os
 
-# In production, this would call AWS API, Azure API, or a CMDB
-# For lab, we use environment variables or a config file
 hosts = {
     "webservers": ["web1.lab.local", "web2.lab.local"],
     "appservers": ["app1.lab.local"],
     "databases": ["db1.lab.local"],
 }
 
-# Build Ansible inventory structure
 inventory = {
     "_meta": {"hostvars": {}},
     "all": {"children": ["webservers", "appservers", "databases"]},
@@ -417,7 +518,6 @@ inventory = {
     "databases": {"hosts": hosts["databases"]},
 }
 
-# Add host vars (replace with your IPs)
 ip_map = {
     "web1.lab.local": "192.168.1.20",
     "web2.lab.local": "192.168.1.21",
@@ -430,68 +530,71 @@ for h in sum(hosts.values(), []):
 print(json.dumps(inventory, indent=2))
 ```
 
-Make it executable: `chmod +x inventory/dynamic_inventory.py`
+2. **Make it executable:** `chmod +x inventory/dynamic_inventory.py`  
+3. **Push to GitHub/GitLab.**
 
-Push to GitHub/GitLab. Then in AAP:
-
-1. Create a **Project** pointing to this repo (with SCM credential if private)
-2. Create inventory `Lab-Script-Inventory`
-3. Add **Source:** `Sourced from a project`
-4. **Project:** your repo
-5. **Script:** `inventory/dynamic_inventory.py`
-6. **Update on launch:** Checked
-7. Sync
+4. **In AAP 2.4:**
+   - Create a **Project** (Resources --> Projects --> Add) pointing to the repo, with SCM credential if private.
+   - Create inventory `Lab-Script-Inventory` (Resources --> Inventories --> Add).
+   - Open it, go to **Sources** tab, click **Add**.
+   - **Source:** Select **Sourcing from a Project**.
+   - **Project:** Select your Git project.
+   - **Inventory File:** Enter `inventory/dynamic_inventory.py` (the path to the script in the repo). The script must be executable in Git.
+   - **Update on launch:** Checked.
+   - Save and click **Sync all**.
 
 ### Option C — AWS EC2 Dynamic Inventory (If You Have AWS)
 
-1. Create inventory `Lab-AWS-Inventory`
-2. Add **Source:** `Amazon ec2`
-3. **Credential:** Create an **Amazon Web Services** credential with Access Key and Secret Key
-4. **Regions:** `us-east-1` (or your region)
-5. **Instance filters** (optional): `tag:Environment=prod`
-6. **Update on launch:** Checked
-7. Sync — AAP will pull all EC2 instances (or filtered) as hosts
+**Purpose:** Pull EC2 instances automatically from AWS as inventory hosts.
+
+**Detailed steps:**
+
+1. **Create an AWS credential** (Step 14 above) with Access Key and Secret Key.
+2. **Create inventory:** **Resources --> Inventories --> Add** → Name: `Lab-AWS-Inventory`, Organization: `Default` → Save.
+3. **Add source:** **Sources** tab → **Add**
+4. **Source:** Select **Amazon ec2** (or **Amazon Web Services EC2** — exact label may vary in AAP 2.4).
+5. **Credential:** Select your AWS credential.
+6. **Regions:** `us-east-1` (or your region). Add multiple regions if needed.
+7. **Instance filters (optional):** e.g., `tag:Environment=prod` to filter by tag.
+8. **Update on launch:** Checked.
+9. **Save** and click **Sync all**. AAP will call the AWS API and populate hosts from EC2.
 
 ---
 
 ## Part 4 — Hands-On: Smart Inventory (20 minutes)
 
+> **AAP 2.4 note:** Smart Inventories are deprecated in favor of Constructed Inventories in future releases. For this lab we use Smart Inventory as it is still available and simpler for beginners. Constructed Inventories use `source_vars` and `limit` with Jinja2.
+
 ### Step 9 — Create a Smart Inventory
 
-1. **Resources --> Inventories --> Add --> Add smart inventory**
-2. **Name:** `Lab-Prod-Web-Only`
-3. **Organization:** `Default`
-4. **Inventory:** `Lab-Static-Inventory` (or `Lab-Dynamic-Inventory`)
-5. **Smart host filter:** Use the query builder or enter:
+**Purpose:** A Smart Inventory is a filtered view of hosts from existing inventories. Hosts are filtered by a search (e.g., group name, variables). No hosts are duplicated — it is a dynamic query.
 
-```
-groups__name=webservers
-```
+**Detailed steps:**
 
-This shows only hosts in the `webservers` group.
-
-6. **Limit:** (optional) Leave blank for no limit
-7. Click **Save**
-8. Open the smart inventory — **Hosts** tab shows only filtered hosts
+1. **Navigate:** **Resources --> Inventories**
+2. **Add smart inventory:** Click **Add**, then select **Add smart inventory** from the dropdown.
+3. **Fill in the form:**
+   - **Name:** `Lab-Prod-Web-Only`
+   - **Organization:** `Default`
+   - **Smart host filter:** Click the search icon to open the filter builder. Change the search type to **Advanced** if needed. Enter a filter such as:
+     - **Key:** `groups__name` (or use the query builder)
+     - **Value:** `webservers`
+   - Or type directly: `groups__name=webservers`
+   - **Source inventory:** The Smart Inventory filters hosts from inventories in the same organization. Ensure `Lab-Static-Inventory` has hosts. The filter applies to all inventories in the org by default, or you may need to specify the source (check AAP 2.4 UI for "Source" or "Input inventories").
+4. **Save** and open the smart inventory. The **Hosts** tab shows only hosts matching the filter (i.e., in the `webservers` group).
 
 ### Step 10 — Create Another Smart Inventory (Multi-Condition)
 
+**Purpose:** Filter hosts that belong to multiple groups.
+
+**Detailed steps:**
+
 1. **Add --> Add smart inventory**
 2. **Name:** `Lab-Prod-All-Tiers`
-3. **Inventory:** `Lab-Static-Inventory`
-4. **Smart host filter:**
-
-```
-groups__name__in=webservers,appservers,databases
-```
-
-Or, if using a `prod` parent group:
-
-```
-groups__name=prod
-```
-
-5. Save and verify the host list.
+3. **Smart host filter:** Use one of:
+   - `groups__name__in=webservers,appservers,databases` (hosts in any of these groups)
+   - `groups__name=prod` (if using a `prod` parent group that contains all tiers)
+4. **Save** and verify the host list in the **Hosts** tab.
 
 ---
 
@@ -499,68 +602,100 @@ groups__name=prod
 
 ### Step 11 — Create Machine Credential (SSH Key)
 
-1. **Resources --> Credentials --> Add**
-2. Fill in:
-   - **Name:** `SSH-Key-WebServers`
+**Purpose:** Machine credentials allow AAP to SSH into managed hosts. Use an SSH key for passwordless, secure access.
+
+**Detailed steps:**
+
+1. **Navigate:** **Resources --> Credentials**
+2. **Add credential:** Click **Add**
+3. **Select credential type:** In the **Credential Type** dropdown, select **Machine**
+4. **Fill in the form:**
+   - **Name:** `SSH-Key-WebServers` — A descriptive name for this credential
    - **Organization:** `Default`
-   - **Credential Type:** `Machine`
-   - **Username:** `ec2-user` or `root` (match your nodes)
-   - **SSH Private Key:** Paste your private key content
-   - **Privilege Escalation:** Enable if you need sudo
-3. Click **Save**
+   - **Username:** `ec2-user` (Amazon Linux/RHEL on EC2), `root`, or `ubuntu` — must match the user on your managed nodes
+   - **SSH Private Key:** Paste the contents of your private key file (e.g., `~/.ssh/id_rsa`). The key must be in PEM format. Do not paste the public key.
+   - **Privilege Escalation:** Expand this section and check **Enable** if your playbooks need to run commands as root via `sudo`. If enabled, you may need to set **Privilege Escalation Username** to `root` and **Privilege Escalation Password** if sudo requires a password (or ensure passwordless sudo on nodes).
+5. **Save** — The credential is stored encrypted. It will appear in the Credentials list.
+
+---
 
 ### Step 12 — Create Source Control Credential (GitHub/GitLab)
 
-1. **Resources --> Credentials --> Add**
-2. Fill in:
+**Purpose:** Authenticates AAP to clone private Git repositories. Use a Personal Access Token (PAT), not your account password.
+
+**Detailed steps:**
+
+1. **Create a GitHub PAT (if you don't have one):**  
+   - GitHub → Your profile → **Settings** → **Developer settings** → **Personal access tokens** → **Generate new token (classic)**  
+   - Scopes: `repo`, `read:org` (for private org repos)  
+   - Copy the token — you won't see it again.
+
+2. **In AAP 2.4:** **Resources --> Credentials --> Add**
+3. **Credential Type:** Select **Source Control**
+4. **Fill in:**
    - **Name:** `GitHub-Personal-Access-Token`
    - **Organization:** `Default`
-   - **Credential Type:** `Source Control`
    - **Source Control Type:** `Git`
-   - **Username:** your GitHub username (or leave blank for token-only)
-   - **Password:** Your Personal Access Token (not your GitHub password)
-   - **Project:** (optional) Leave blank for org-wide use
-3. Click **Save**
+   - **Username:** Your GitHub username (optional for token-only auth)
+   - **Password:** Paste your **Personal Access Token** (not your GitHub password)
+   - **Project:** Leave blank for org-wide use
+5. **Save**
 
-> **Getting a GitHub PAT:** GitHub → Settings → Developer settings → Personal access tokens → Generate new token. Scopes: `repo`, `read:org` (if using private org repos).
+---
 
 ### Step 13 — Create Ansible Vault Credential
 
+**Purpose:** Decrypts files encrypted with `ansible-vault encrypt`. Required when playbooks or variables use vault encryption.
+
+**Detailed steps:**
+
 1. **Resources --> Credentials --> Add**
-2. Fill in:
+2. **Credential Type:** Select **Ansible Vault**
+3. **Fill in:**
    - **Name:** `Vault-Lab-Secrets`
    - **Organization:** `Default`
-   - **Credential Type:** `Ansible Vault`
-   - **Vault Password:** A password you will use to encrypt/decrypt vault files
-3. Click **Save**
+   - **Vault Password:** The password you use with `ansible-vault encrypt/decrypt`
+4. **Save**
 
-> **Usage:** When a playbook or variable file is encrypted with `ansible-vault encrypt`, the job template must have this credential so AAP can decrypt it at runtime.
+> **Usage:** When a job template runs a playbook that includes vault-encrypted content, add this credential to the template. AAP will use it to decrypt at runtime.
+
+---
 
 ### Step 14 — Create AWS Credential (Optional — If You Have AWS)
 
+**Purpose:** Allows AAP to call AWS APIs (e.g., for EC2 dynamic inventory or cloud modules).
+
+**Detailed steps:**
+
 1. **Resources --> Credentials --> Add**
-2. Fill in:
+2. **Credential Type:** Select **Amazon Web Services**
+3. **Fill in:**
    - **Name:** `AWS-Lab-Access`
    - **Organization:** `Default`
-   - **Credential Type:** `Amazon Web Services`
-   - **Access Key:** Your AWS access key ID
-   - **Secret Key:** Your AWS secret access key
+   - **Access Key:** AWS access key ID
+   - **Secret Key:** AWS secret access key
    - **Region:** `us-east-1` (or your region)
-3. Click **Save**
+4. **Save**
+
+---
 
 ### Step 15 — Create Network Credential (For Network Devices)
 
+**Purpose:** Used for network devices (Cisco, Juniper) that require enable/privileged mode.
+
+**Detailed steps:**
+
 1. **Resources --> Credentials --> Add**
-2. Fill in:
+2. **Credential Type:** Select **Network**
+3. **Fill in:**
    - **Name:** `Network-Cisco-Lab`
    - **Organization:** `Default`
-   - **Credential Type:** `Network`
    - **Username:** `admin`
-   - **Password:** device password
-   - **Authorize:** Enable and set **Authorize password** if the device uses enable secret
-3. Click **Save**
+   - **Password:** Device login password
+   - **Authorize:** Enable, and set **Authorize password** (enable secret) if the device uses it
+4. **Save**
 
-> **Note:** You need actual network devices to use this. For lab awareness only, you can create the credential and not use it.
+> **Note:** For lab awareness only unless you have network devices to test.
 
 ---
 
@@ -568,101 +703,137 @@ groups__name=prod
 
 ### Step 16 — Create a Project Linked to Git
 
-1. **Resources --> Projects --> Add**
-2. Fill in:
+**Purpose:** A Project links AAP to a Git repository. Playbooks are pulled from the repo and stored locally for job execution.
+
+**Detailed steps:**
+
+1. **Navigate:** **Resources --> Projects**
+2. **Add project:** Click **Add**
+3. **Fill in the form:**
    - **Name:** `Lab-Git-Project`
    - **Organization:** `Default`
-   - **Source Control Type:** `Git`
-   - **Source Control URL:** `https://github.com/your-org/your-repo.git` (use a real repo)
-   - **Source Control Credential:** `GitHub-Personal-Access-Token`
-   - **Update on launch:** Checked (syncs before each job that uses this project)
-3. Click **Save**
-4. Click the **Sync** icon to pull the repo
-5. Verify **Status** shows a green check and **Revision** shows the latest commit
+   - **Source Control Type:** Select **Git** from the dropdown
+   - **Source Control URL:** `https://github.com/your-username/your-repo.git` — use your actual repo URL
+   - **Source Control Credential:** Select `GitHub-Personal-Access-Token` (required for private repos)
+   - **Source Control Branch/Tag/Commit:** Leave blank to use the default branch (usually `main`)
+   - **Update on launch:** Check this — AAP will sync the project before each job that uses it
+4. **Save**
+5. **Sync the project:** Click the **Sync** (circular arrows) icon next to the project. Wait for the sync to complete.
+6. **Verify:** **Status** should show a green check. **Revision** shows the latest commit hash. **Playbooks** list should show your playbook files.
+
+---
 
 ### Step 17 — Create a Project with Manual (Local) Source (Fallback)
 
-If you do not have a Git repo, use the manual project from Lab 02:
+**Purpose:** For labs without Git, a Manual project uses a directory on the AAP server.
 
-1. Ensure `/var/lib/awx/projects/lab-playbooks` exists with playbooks
-2. **Resources --> Projects --> Add**
-3. **Name:** `Lab-Manual-Project`
-4. **Source Control Type:** `Manual`
-5. **Playbook Directory:** `lab-playbooks`
-6. Save
+**Detailed steps:**
+
+1. **Ensure the directory exists** on the AAP server (from Lab 02):
+   ```bash
+   sudo ls /var/lib/awx/projects/lab-playbooks
+   ```
+   If it doesn't exist, create it and add a playbook (see Lab 02).
+
+2. **In AAP 2.4:** **Resources --> Projects --> Add**
+3. **Fill in:**
+   - **Name:** `Lab-Manual-Project`
+   - **Organization:** `Default`
+   - **Source Control Type:** Select **Manual**
+   - **Playbook Directory:** Select `lab-playbooks` from the dropdown (it lists directories under `/var/lib/awx/projects/`)
+4. **Save**
 
 ---
 
 ## Part 7 — Hands-On: Notification Integrations (35 minutes)
 
+> **AAP 2.4 navigation:** Notifications are under **Administration --> Notifications**. Each notification type (Email, Slack, Webhook) is a **Notification Template**. You create the template, then attach it to Job Templates, Projects, or Organizations.
+
 ### Step 18 — Configure Slack Notification
 
-1. **Create a Slack Incoming Webhook** (if you have Slack):
-   - In Slack: Channel → Integrations → Incoming Webhooks → Add to Slack
-   - Choose a channel, copy the webhook URL (e.g., `https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXX`)
+**Purpose:** Send job status (success/failure) to a Slack channel.
 
-2. In AAP: **Administration --> Notification templates**
-3. Click **Add**
-4. Fill in:
+**Detailed steps:**
+
+1. **Create a Slack Incoming Webhook:**
+   - In Slack: Open a channel → click the channel name → **Integrations** → **Add an app** → search for **Incoming Webhooks** → **Add to Slack**
+   - Choose the channel, click **Add Incoming Webhooks integration**
+   - Copy the **Webhook URL** (e.g., `https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXX`)
+
+2. **In AAP 2.4:** Navigate to **Administration --> Notifications**
+3. **Add notification template:** Click **Add**
+4. **Fill in the form:**
    - **Name:** `Slack-Job-Status`
    - **Organization:** `Default`
-   - **Notification type:** `Slack`
-   - **Slack token** or **Slack webhook URL:** Paste your webhook URL
-   - **Channels:** `#automation` (or your channel)
-   - **Messages:** Customize the success/failure messages or use defaults
-5. Click **Save**
+   - **Notification type:** Select **Slack** from the dropdown
+   - **Slack configuration:** AAP 2.4 may use either:
+     - **Token:** A Slack Bot token (from api.slack.com/apps)
+     - **Webhook URL:** Or a target URL field — paste your Incoming Webhook URL
+   - **Channels:** `#automation` (or your channel name)
+   - **Messages:** You can customize the **Started**, **Success**, and **Error** message bodies. Defaults work for most cases.
+5. **Save**
 
 6. **Attach to a Job Template:**
-   - **Resources --> Templates** → Open `Ping-Lab` (or any template)
-   - **Notifications** section: Add **Slack-Job-Status** for **On success** and **On failure**
-   - Save
+   - **Resources --> Templates** → Open your job template (e.g., `Ping-Lab`)
+   - Scroll to the **Notifications** section
+   - Click **Add** and select `Slack-Job-Status`
+   - For **Started**, **Success**, and **Error** — enable the ones you want (e.g., Success and Error)
+   - **Save**
 
 7. **Launch** the job — you should receive a Slack message when the job completes.
 
+---
+
 ### Step 19 — Configure Email Notification
 
-1. **Administration --> Settings --> System** (or **Jobs** settings)
-2. Ensure **SMTP** is configured:
-   - **Administration --> Settings --> System**
-   - **SMTP Server:** Your SMTP host (e.g., `smtp.gmail.com`)
-   - **SMTP Port:** 587 (TLS) or 465 (SSL)
-   - **SMTP Username / Password:** If required
-   - **From email:** `aap@yourdomain.com`
+**Purpose:** Send job status via email.
 
-3. **Administration --> Notification templates --> Add**
-4. Fill in:
+**Detailed steps:**
+
+1. **Configure SMTP (if not done):**  
+   - **Settings** (left panel) → **Jobs** or **System** tab  
+   - Set **SMTP Host**, **SMTP Port** (587 or 465), **SMTP Username/Password** if required, **Sender email**
+
+2. **Create the notification template:**  
+   - **Administration --> Notifications --> Add**
    - **Name:** `Email-Job-Status`
-   - **Notification type:** `Email`
-   - **Recipients:** `admin@yourdomain.com`
-5. Save
+   - **Organization:** `Default`
+   - **Notification type:** Select **Email**
+   - **Recipient list:** `admin@yourdomain.com` (comma-separated for multiple)
+   - **Save**
 
-6. Attach to a job template and test.
+3. **Attach to a job template** (same as Slack — add in the Notifications section).
 
-> **Lab note:** If you do not have SMTP access, skip email and use Slack or webhook only.
+> **Lab note:** If you don't have SMTP access, skip email and use Slack or webhook only.
+
+---
 
 ### Step 20 — Configure Webhook Notification (Outbound)
 
-A webhook sends an HTTP POST to a URL when a job completes. Useful for custom integrations.
+**Purpose:** Send an HTTP POST to a URL when a job completes. Useful for CI/CD or custom integrations.
 
-1. **Administration --> Notification templates --> Add**
-2. Fill in:
+**Detailed steps:**
+
+1. **Get a test URL:** Go to https://webhook.site and copy your unique URL.
+2. **Administration --> Notifications --> Add**
+3. **Fill in:**
    - **Name:** `Webhook-On-Failure`
-   - **Notification type:** `Webhook`
-   - **Target URL:** `https://your-server.com/webhook` (use a request bin for testing: https://webhook.site)
-   - **HTTP Headers (optional):** `Content-Type: application/json`
-3. Save
+   - **Organization:** `Default`
+   - **Notification type:** Select **Webhook**
+   - **Target URL:** Paste your webhook.site URL (or `https://your-server.com/webhook`)
+   - **HTTP Method:** `POST`
+   - **HTTP Headers (optional):** `{"Content-Type": "application/json"}`
+4. **Save**
+5. **Attach to a job template** for **On failure** (Error). Launch a job that fails — the URL will receive a POST with job metadata in JSON.
 
-4. Attach to a job template for **On failure**
-5. Launch a job that fails (e.g., wrong inventory) — the webhook URL will receive a POST with job metadata
+---
 
 ### Step 21 — Test Notifications End-to-End
 
-1. Create a job template that runs a simple playbook (e.g., `ping.yml`)
-2. Add **Slack-Job-Status** (and optionally **Email-Job-Status**) to **On success** and **On failure**
-3. **Launch** the job
-4. Verify you receive a Slack (and/or email) notification
-5. Modify the playbook to force a failure (e.g., typo in module name), launch again
-6. Verify you receive a failure notification
+1. Ensure a job template has **Slack-Job-Status** (or **Email-Job-Status**) attached for **On success** and **On failure**.
+2. **Launch** the job — verify you receive a success notification.
+3. Modify the playbook to force a failure (e.g., add a task with a typo: `ansible.builtin.pingg`), launch again.
+4. Verify you receive a failure notification.
 
 ---
 
@@ -714,10 +885,10 @@ An e-commerce company runs 3,000+ servers across AWS, Azure, and on-premises dat
 
 | Symptom | Check |
 |---------|-------|
-| File source not found | Verify path: `/var/lib/awx/inventory_files/` and `awx` user can read |
-| Script source fails | Run script manually: `python3 inventory/dynamic_inventory.py` — must output valid JSON |
+| Project source — file not found | Verify the project is synced; the inventory file path is relative to project root (e.g., `dynamic_hosts.yml` or `inventory/script.py`). Ensure `awx` owns `/var/lib/awx/projects/<project>/` |
+| Script source fails | Run script manually: `python3 inventory/dynamic_inventory.py` — must output valid JSON. Script must be executable (`chmod +x`) in Git |
 | AWS source fails | Verify AWS credential; check IAM permissions for `ec2:DescribeInstances` |
-| Permission denied | Ensure `awx` owns files: `sudo chown -R awx:awx /var/lib/awx/inventory_files` |
+| Permission denied | Ensure `awx` owns project files: `sudo chown -R awx:awx /var/lib/awx/projects/lab-inventory-project` |
 
 ### Credential Test Fails
 
@@ -735,6 +906,12 @@ An e-commerce company runs 3,000+ servers across AWS, Azure, and on-premises dat
 | Slack: No message | Verify webhook URL; check channel exists; ensure template is attached to job |
 | Email: No message | Verify SMTP settings; check spam folder; test with a simple job |
 | Webhook: No POST | Verify URL is reachable from AAP; check firewall; use webhook.site for testing |
+
+### Groups Tab Not Visible
+
+- **Use Actions instead:** On the inventory details page, click **Actions** (top right) → **Create a new Group**. This opens the same form as the Groups tab.
+- **Check inventory type:** Groups are only for **standard** inventories. Smart Inventories and Constructed Inventories do not have a Groups tab.
+- **New UI Preview:** If "Preview of New User Interface" is enabled, the layout may differ. Use the classic UI (disable the preview in Settings → System → Miscellaneous) or look for equivalent group options in the new interface.
 
 ### Smart Inventory Shows No Hosts
 
@@ -780,20 +957,21 @@ An e-commerce company runs 3,000+ servers across AWS, Azure, and on-premises dat
 
 ---
 
-## Quick Reference — Inventory Source Types
+## Quick Reference — Inventory Source Types (AAP 2.4)
 
 | Source | Use Case |
 |--------|----------|
-| Manual | Add hosts/groups in UI |
-| File, directory or script | Local file or script path |
-| Sourced from a project | Script in Git repo |
+| Manual | Add hosts/groups in UI (no source) |
+| Sourcing from a Project | File or script in a Project (Git or Manual) |
 | Amazon ec2 | AWS EC2 instances |
-| Microsoft Azure | Azure VMs |
+| Microsoft Azure Resource Manager | Azure VMs |
 | Google Compute Engine | GCP instances |
 | Red Hat Satellite 6 | Satellite hosts |
 | Red Hat Virtualization | RHV VMs |
 | VMware vCenter | vSphere VMs |
 | OpenStack | OpenStack instances |
+| Red Hat Ansible Automation Platform | AAP instances |
+| Red Hat Insights | Insights inventory |
 
 ---
 
